@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<collection_policy xmlns="http://www.islandora.ca" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" name="" xsi:schemaLocation="http://www.islandora.ca http://syn.lib.umanitoba.ca/collection_policy.xsd"> 
+    <content_models> 
+        <content_model dsid="ISLANDORACM" name="Collection" namespace="islandora:collection" pid="islandora:collectionCModel"></content_model> 
+    </content_models> 
+    <search_terms> 
+        <term default="true" field="mods.Title">Title</term>
+        <term field="mods.altTitle">Alternate Title</term>
+        <term field="mods.creator">Creator</term>
+        <term field="mods.creatorGivenName">Creator Given Name</term>
+        <term field="mods.creatorFamilyName">Creator Family Name</term>
+        <term field="mods.creatorTACreator Terms of Address">Creator Terms of Address</term>
+        <term field="mods.contributorContributor">Contributor</term>
+        <term field="mods.contributorFamilyName">Contributor Family Name</term>
+        <term field="mods.contributorGivenName">Contributor Given Name</term>
+        <term field="mods.contributorTA">Contributor TA</term>
+        <term field="mods.contributor">Contributor Corporate</term>
+        <term field="mods.creatorCorporate">Creator Corporate</term>
+        <term field="mods.typeOfResource">Type of Resource</term>
+        <term field="mods.dateCreated">Date Created</term>
+        <term field="mods.dateDigitized">Date Digitized</term>
+        <term field="mods.dateCopyright">Date Copyright</term>
+        <term field="mods.dateOther">Date Other</term>
+        <term field="mods.digitalOrigin">Digital Origiin</term>
+        <term field="mods.description">Description</term>
+        <term field="mods.topics">Topics</term>
+        <term field="mods.places">Places</term>
+        <term field="mods.dates">Dates</term>
+        <term field="mods.people">People</term>
+        <term field="mods.organizations">Organizations</term>
+        <term field="mods.handle">Handle</term>
+        <term field="mods.rightsStatement">Rights Statement</term>
+        <term field="mods.genre">Genre</term>
+        <term field="mods.PlaceOfPublication">Place of Publication</term>
+        <term field="mods.publisher">Publisher</term>
+        <term field="mods.language">Language</term>
+        <term field="mods.extent">Extent</term>
+        <term field="mods.form">Form</term>
+        <term field="mods.physicalNote">Physical Note</term>
+        <term field="mods.targetAudience">Target Audience</term>
+        <term field="mods.notes">Notes</term>
+        <term field="mods.notesAdmin">Notes Admin</term>
+        <term field="mods.notesFunding">mods.notesFunding</term>
+        <term field="mods.hostObject">Host Object</term>
+        <term field="mods.constituentObject">Constituent Object</term>
+        <term field="mods.series">Series</term>
+        <term field="mods.localIdentifier">Local Identifier</term>
+        <term field="mods.isbn">isbn</term>
+        <term field="mods.issn">issn</term>
+    </search_terms>
+    <staging_area></staging_area>
+    <relationship>isMemberOfCollection</relationship> 
+</collection_policy> 

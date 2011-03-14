@@ -1,0 +1,359 @@
+<?php
+
+/**
+ * Drupal hook for admin form
+ * 
+ */
+function islandora_coalliance_manager_admin() {
+  return "";
+}
+
+function islandora_admin_coalliance_admin_settings_submit($form, $form_values) {
+  drupal_set_message("Custom form handler.");
+}
+
+/**
+ * drupal hook
+ * @return string
+ */
+function islandora_coalliance_manager_menu() {
+  /* $items['islandora_co_manager'] = array(
+    'title' => 'Islandora Manager',
+    'type' => MENU_NORMAL_ITEM,
+    //'page callback' => 'islandora_coalliance_manager_create_collection',
+    //'page arguments' => array(2),
+    'access arguments' => array('ingest new fedora objects'),
+    ); */
+  $items['islandora_co_manager/create_collection'] = array(
+    'title' => 'Create Collection',
+    //'type' => MENU_NORMAL_ITEM,
+    'page arguments' => array(2),
+    'page callback' => 'islandora_coalliance_manager_create_collection',
+    'access arguments' => array('ingest new fedora objects'),
+  );
+  $items['islandora_co_manager/manage_policy_stream'] = array(
+    'title' => 'Create Collection',
+    //'type' => MENU_LOCAL_TASK,
+    'page arguments' => array(2),
+    'page callback' => 'islandora_coalliance_manager_manage_policy',
+    'access arguments' => array('ingest new fedora objects'),
+  );
+
+  $items['admin/settings/islandora_admin_coalliance'] = array(
+    'title' => 'Islandora Admin Co Client',
+    'description' => 'For managing fedora collection creation and xacml Policies',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('islandora_coalliance_manager_admin_settings'),
+    'access arguments' => array('administer site configuration'),
+    //'file' => 'islandora.admin.coalliance.inc',
+    'type' => MENU_NORMAL_ITEM,
+  );
+  return $items;
+}
+
+/**
+ *
+ * @return <type>
+ */
+function islandora_coalliance_manager_create_collection() {
+
+  return drupal_get_form('islandora_coalliance_manager_create_collection_form');
+}
+
+/**
+ *
+ * @return array
+ */
+function islandora_coalliance_manager_get_existing_collections() {
+  module_load_include('inc', 'fedora_repository', 'api/fedora_item');
+  module_load_include('inc', 'fedora_repository', 'CollectionClass');
+  $itql_query = 'select $object  $title from <#ri> where
+$object <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active>
+and $object <info:fedora/fedora-system:def/model#hasModel> <info:fedora/islandora:collectionCModel>
+and $object <info:fedora/fedora-system:def/model#label> $title';
+  $collectionClass = new CollectionClass();
+  $query_results = $collectionClass->getRelatedItems(NULL, $itql_query);
+  $list_of_objects = islandora_coalliance_manager_itql_to_array($query_results);
+  return $list_of_objects;
+}
+
+/**
+ *
+ * @param string $itql_query
+ * @return <type>
+ */
+function islandora_coalliance_manager_get_related_objects($itql_query) {
+  module_load_include('inc', 'fedora_repository', 'CollectionClass');
+  $collectionClass = new CollectionClass();
+  $query_results = $collectionClass->getRelatedItems(NULL, $itql_query);
+  $list_of_objects = islandora_coalliance_manager_itql_to_array($query_results);
+  return $list_of_objects;
+}
+
+/**
+ *
+ * @return <type>
+ */
+function islandora_coalliance_manager_create_collection_form() {
+  $itql_query = 'select $object  $title from <#ri> where
+$object <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active>
+and $object <info:fedora/fedora-system:def/model#hasModel> <info:fedora/islandora:collectionCModel>
+and $object <info:fedora/fedora-system:def/model#label> $title';
+  $existing_collections = islandora_coalliance_manager_get_related_objects($itql_query);
+  $itql_query = 'select $object  $title from <#ri> where
+$object <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active>
+and $object <info:fedora/fedora-system:def/model#hasModel> <info:fedora/fedora-system:ContentModel-3.0>
+and $object <info:fedora/fedora-system:def/model#label> $title';
+  $existing_cmodels = islandora_coalliance_manager_get_related_objects($itql_query);
+  //var_dump($existing_collections);exit();
+  $form = array();
+  $roles = user_roles(TRUE);
+  $select_roles = array();
+  foreach ($roles as $key => $value) {
+    $select_roles[$value] = $value;
+  }
+  $pid_namespaces = array(); // explode(' ',variable_get('fedora_pids_allowed', 'default: demo: changeme: Islandora: ilives: '));
+  foreach (explode(' ', trim(variable_get('fedora_pids_allowed', 'default: demo: changeme: Islandora: ilives: ')))as $namespace) {
+    $pid_namespaces[$namespace] = $namespace;
+  }
+  $form['collection_for_ingest'] = array(
+    '#type' => 'select',
+    '#title' => t('Choose a Collection to create this collection in'),
+    '#options' => $existing_collections,
+    '#required' => TRUE,
+    '#description' => t('A list of existing collections.'),
+  );
+  $form['pid_namespace'] = array(
+    '#type' => 'select',
+    '#title' => t('Choose a namespace'),
+    '#options' => $pid_namespaces,
+    '#required' => TRUE,
+    '#multiple' => FALSE,
+    '#description' => t('Choose the namespace these objects will have when ingested'),
+  );
+  $form['allowed_cModels'] = array(
+    '#type' => 'select',
+    '#title' => t('Choose the content Models allowed'),
+    '#options' => $existing_cmodels,
+    '#required' => TRUE,
+    '#multiple' => TRUE,
+    '#description' => t('A list of existing Content Models.  These represent the types of objects that users will be allowed to ingest in this new collection'),
+  );
+  $form['collection_name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Collection Name'),
+    '#required' => TRUE,
+    '#required' => TRUE,
+    '#description' => t('A name or title for the new collection'),
+  );
+  $form['user_role'] = array(
+    '#type' => 'select',
+    '#title' => t('Choose the user role'),
+    '#required' => TRUE,
+    '#options' => $select_roles,
+    '#description' => t('Choose the role that will be assigned to users.'),
+  );
+  $form['submitter_role'] = array(
+    '#type' => 'select',
+    '#title' => t('Choose the submitter role'),
+    '#required' => TRUE,
+    '#options' => $select_roles,
+    '#description' => t('Choose the role that will be assigned to submitters.'),
+  );
+  $form['approver_role'] = array(
+    '#type' => 'select',
+    '#title' => t('Choose the approver role'),
+    '#required' => TRUE,
+    '#options' => $select_roles,
+    '#description' => t('Choose the role that will be assigned to approvers (users that can approve objects).'),
+  );
+  $form['manager_role'] = array(
+    '#type' => 'select',
+    '#title' => t('Choose the manager role'),
+    '#required' => TRUE,
+    '#options' => $select_roles,
+    '#description' => t('Choose the role that will be assigned to managers.'),
+  );
+  $form['adminstrator_role'] = array(
+    '#type' => 'select',
+    '#title' => t('Choose the creator role'),
+    '#required' => TRUE,
+    '#options' => $select_roles,
+    '#description' => t('Choose the role that will be assigned to administrators.'),
+  );
+
+  $form['submit'] = array('#type' => 'submit', '#value' => t('Create'));
+
+  return $form;
+}
+
+/**
+ *
+ * @param <array> $form
+ * @param <array> $form_state
+ *
+ * form_state values array look like this
+  'collection_for_ingest' => string 'uofm:ContentModelCollection' (length=27)
+  'pid_namespace' => string 'cogru:' (length=6)
+  'allowed_cModels' =>
+  array
+  'demo:XML_TO_HTMLDOC' => string 'demo:XML_TO_HTMLDOC' (length=19)
+  'fedora-system:FedoraObject-3.0' => string 'fedora-system:FedoraObject-3.0' (length=30)
+  'collection_name' => string 'test' (length=4)
+  'user_role' => string 'authenticated user' (length=18)
+  'submitter_role' => string 'administrator' (length=13)
+  'approver_role' => string 'administrator' (length=13)
+  'manager_role' => string 'viewer' (length=6)
+  'adminstrator_role' => string 'viewer' (length=6)
+  'op' => string 'Create' (length=6)
+  'submit' => string 'Create' (length=6)
+  'form_build_id' => string 'form-44eafb6e55be3ef1ea8bac3a285f256c' (length=37)
+  'form_token' => string 'e7f4d0047ef69b74efb2840df9bb2499' (length=32)
+  'form_id' => string 'islandora_coalliance_manager_create_collection_form' (length=51)
+ *
+ */
+function islandora_coalliance_manager_create_collection_form_submit(&$form, &$form_state) {
+  global $user;
+  global $base_url;
+  module_load_include('inc', 'fedora_repository', 'api/fedora_item');
+  $collection_to_ingest_into = $form_state['values']['collection_for_ingest'];
+  $new_collections_label = $form_state['values']['collection_name'];
+  $user_role = $form_state['values']['user_role'];
+  $submitter_role = $form_state['values']['submitter_role'];
+  $manager_role = $form_state['values']['manager_role'];
+  $adminstrator_role = $form_state['values']['adminstrator_role'];
+  $policy_stream = create_security_policy_stream($form, $form_state);
+  $mods_stream = create_mods_stream($form, $form_state);
+  //echo '<pre>'.$policy_stream.'</pre>';
+  //exit();
+  $collection_policy_stream = create_collection_policy_stream($form, $form_state); //searchterms and relationship is assumed here
+  $new_pid = fedora_item::get_next_PID_in_namespace();
+  $new_object = fedora_item::ingest_new_item($new_pid, 'A', $new_collections_label, $user->name);
+  $new_object->add_datastream_from_string($collection_policy_stream, 'COLLECTION_POLICY', 'COLLECTION_POLICY', 'text/xml', 'M', null);
+  $new_object->add_datastream_from_string($policy_stream,'POLICY','POLICY','text/xml','M','added security policy stream');
+  $new_object->add_datastream_from_string($mods_stream,'MODS','MODS','text/xml','M','added mods stream');
+  $new_object->add_relationship('isMemberOfCollection', $collection_to_ingest_into, RELS_EXT_URI);
+  $new_object->add_relationship('hasModel', 'islandora:collectionCmodel', FEDORA_MODEL_URI);
+  $return_url = '<a href="' . $base_url . '/fedora/repository/' . $new_pid . '/-/' . $new_collections_label . '"/>' . $new_collections_label . '</a>';
+  $form_state['redirect'] = '/fedora/repository/' . $new_pid . '/-/' . $new_collections_label;
+  drupal_set_message(t('Created new Collection %s', array('%s' => $new_collections_label . ' with pid ' . $new_pid)));
+  return 'done';
+}
+
+
+function create_mods_stream($form, $form_state){
+   $filename = drupal_get_path('module', 'islandora_coalliance_manager') . '/foxml/mods.xml';
+  if (file_exists($filename)) {
+    $contents = file_get_contents($filename);
+    $mods_title = $form_state['values']['collection_name'];
+    $contents = str_replace('mods_title', $mods_title, $contents);
+    return $contents;
+  }
+  else {
+    drupal_set_message(t('Failed to read security policy template file'), 'error');
+    return ' ';
+  }
+}
+
+/**
+ *
+ * @param <type> $form
+ * @param <type> $form_state
+ * @return <type>
+ */
+function create_security_policy_stream($form, $form_state) {
+  $filename = drupal_get_path('module', 'islandora_coalliance_manager') . '/policy/Colorado_Alliance_Template.xml';
+  if (file_exists($filename)) {
+    $contents = file_get_contents($filename);
+    $user_role = $form_state['values']['user_role'];
+    $submitter_role = $form_state['values']['submitter_role'];
+    $manager_role = $form_state['values']['manager_role'];
+    $approvers_role = $form_state['values']['approver_role'];
+    $adminstrator_role = $form_state['values']['adminstrator_role'];
+    $contents = str_replace('submitter_role', $submitter_role, $contents);
+    $contents = str_replace('manager_role', $manager_role, $contents);
+    $contents = str_replace('user_role', $user_role, $contents);
+    $contents = str_replace('approver_role', $approvers_role, $contents);
+    return $contents;
+  }
+  else {
+    drupal_set_message(t('Failed to read security policy template file'), 'error');
+    return ' ';
+  }
+}
+
+/**
+ *
+ * @param <array> $cmodels
+ *
+ */
+function create_collection_policy_stream($form, $form_state) {
+  $pid_namespace = $form_state['values']['pid_namespace'];
+  $cmodels_for_collection_policy = $form_state['values']['allowed_cModels']; //array
+  $cmodels_with_labels = $form['allowed_cModels']['#options'];
+  $combined_cmodels_array = array(); //key is pid value is label
+  foreach ($cmodels_for_collection_policy as $key => $value) {
+    $combined_cmodels_array[$key] = $cmodels_with_labels[$key];
+  }
+  $dsid = 'ISLANDORACM';
+  $filename = drupal_get_path('module', 'islandora_coalliance_manager') . '/foxml/collectionPolicyTemplate.xml';
+  if (file_exists($filename)) {
+    $xml = simplexml_load_file($filename);
+    foreach ($combined_cmodels_array as $key => $value) {
+      $cmodel = $xml->content_models->addChild('content_model');
+      $cmodel->addAttribute('dsid', $dsid);
+      $cmodel->addAttribute('name', $value);
+      $cmodel->addAttribute('namespace', $pid_namespace . '1');
+      $cmodel->addAttribute('pid', $key);
+    }
+  }
+  else {
+    drupal_set_message(t('Failed to read collection policy template file'), 'error');
+    return;
+  }
+  return $xml->asXML();
+}
+
+/**
+ *
+ * @param <array> $query_results
+ * @return string
+ */
+function islandora_coalliance_manager_itql_to_array($query_results) {
+  try {
+    $xml = new SimpleXMLElement($query_results);
+  } catch (Exception $e) {
+    drupal_set_message(t('Error getting list of collection objects !e', array('!e' => $e->getMessage())), 'error');
+    return;
+  }
+  $list_of_objects = array();
+  foreach ($xml->results->result as $result) {
+    $a = $result->object->attributes();
+    $temp = $a['uri'];
+    $object = substr($temp, strrpos($temp, '/') + 1);
+    $title = $result->title;
+    $list_of_objects[$object] = (string) $title; //.' '.$object;
+  }
+  return $list_of_objects;
+}
+
+/**
+ *
+ * @return <type>
+ */
+function islandora_coalliance_manager_manage_policy() {
+  return 'test2';
+}
+
+/**
+ *
+ * @param <type> $path
+ * @param <type> $arg
+ * @return <type> 
+ */
+function islandora_coalliance_manager_help($path, $arg) {
+  switch ($path) {
+    case 'admin/modules#description' :
+      return t('Fedora admin module.');
+  }
+}
