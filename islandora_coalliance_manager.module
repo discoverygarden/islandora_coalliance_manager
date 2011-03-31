@@ -32,7 +32,7 @@ function islandora_coalliance_manager_menu() {
     'access arguments' => array('ingest new fedora objects'),
   );
   $items['islandora_co_manager/manage_policy_stream'] = array(
-    'title' => 'Create Collection',
+    'title' => 'Manage XACML Policies',
     //'type' => MENU_LOCAL_TASK,
     'page arguments' => array(2),
     'page callback' => 'islandora_coalliance_manager_manage_policy',
@@ -56,6 +56,7 @@ function islandora_coalliance_manager_menu() {
  * @return <type>
  */
 function islandora_coalliance_manager_create_collection() {
+
 
   return drupal_get_form('islandora_coalliance_manager_create_collection_form');
 }
@@ -90,22 +91,47 @@ function islandora_coalliance_manager_get_related_objects($itql_query) {
   return $list_of_objects;
 }
 
+function islandora_coalliance_manager_find_objects_by_pattern($pattern,$field){
+  module_load_include('inc', 'fedora_repository', 'api/fedora_utils');
+   $url = variable_get('fedora_base_url', 'http://localhost:8080/fedora');
+   $url .= "/objects?query=$field~$pattern&pid=true&title=true&resultFormat=xml&maxResults=100";
+   $results = do_curl($url);
+   return $results;
+}
+
 /**
  *
  * @return <type>
  */
 function islandora_coalliance_manager_create_collection_form() {
+  module_load_include('inc', 'fedora_repository', 'api/fedora_item');
+  //need a way to generalize the below query so other installs can use this if desired.  We know these are the collection
+  //cmodels available in coalliance.  we then filter by pid namespace for each institution so we only get there collection
+  //objects
   $itql_query = 'select $object  $title from <#ri> where
 $object <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active>
-and $object <info:fedora/fedora-system:def/model#hasModel> <info:fedora/islandora:collectionCModel>
-and $object <info:fedora/fedora-system:def/model#label> $title';
+and ($object <info:fedora/fedora-system:def/model#hasModel> <info:fedora/codearl:codearlBasicCollection>
+or $object <info:fedora/fedora-system:def/model#hasModel> <info:fedora/islandora:collectionCModel>
+or $object <info:fedora/fedora-system:def/model#hasModel> <info:fedora/coccc:cocccBasicCollection>
+or $object <info:fedora/fedora-system:def/model#hasModel> <info:fedora/codu:coduBasicCollection>
+or $object <info:fedora/fedora-system:def/model#hasModel> <info:fedora/codru:codruBasicCollection>
+or $object <info:fedora/fedora-system:def/model#hasModel> <info:fedora/wyu:wyuBasicCollection>
+or $object <info:fedora/fedora-system:def/model#hasModel> <info:fedora/codr:codrBasicCollection>
+or $object <info:fedora/fedora-system:def/model#hasModel> <info:fedora/codjm:codjmBasicCollection>
+or $object <info:fedora/fedora-system:def/model#hasModel> <info:fedora/co:coBasicCollection>
+or $object <info:fedora/fedora-system:def/model#hasModel> <info:fedora/cowjcpl:cowjcplBasicCollection>
+or $object <info:fedora/fedora-system:def/model#hasModel> <info:fedora/gopig:gopigBasicCollection>
+or $object <info:fedora/fedora-system:def/model#hasModel> <info:fedora/cogru:cogruBasicCollection>)
+and $object <info:fedora/fedora-system:def/model#label> $title
+order by $title';
   $existing_collections = islandora_coalliance_manager_get_related_objects($itql_query);
   $itql_query = 'select $object  $title from <#ri> where
 $object <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active>
 and $object <info:fedora/fedora-system:def/model#hasModel> <info:fedora/fedora-system:ContentModel-3.0>
-and $object <info:fedora/fedora-system:def/model#label> $title';
+and $object <info:fedora/fedora-system:def/model#label> $title
+order by $title';
   $existing_cmodels = islandora_coalliance_manager_get_related_objects($itql_query);
-  //var_dump($existing_collections);exit();
+  
   $form = array();
   $roles = user_roles(TRUE);
   $select_roles = array();
@@ -116,6 +142,8 @@ and $object <info:fedora/fedora-system:def/model#label> $title';
   foreach (explode(' ', trim(variable_get('fedora_pids_allowed', 'default: demo: changeme: Islandora: ilives: ')))as $namespace) {
     $pid_namespaces[$namespace] = $namespace;
   }
+  $existing_collections = islandora_coalliance_manager_limit_collections_by_namespace($existing_collections,$pid_namespaces);
+  $existing_cmodels = islandora_coalliance_manager_limit_collections_by_namespace($existing_cmodels,$pid_namespaces);
   $form['collection_for_ingest'] = array(
     '#type' => 'select',
     '#title' => t('Choose a Collection to create this collection in'),
@@ -189,6 +217,23 @@ and $object <info:fedora/fedora-system:def/model#label> $title';
 
 /**
  *
+ * @param <type> $existing_collections
+ * @param <type> $pid_namespaces
+ */
+function islandora_coalliance_manager_limit_collections_by_namespace($existing_collections, $pid_namespaces){
+  $collections = array();
+ foreach($existing_collections as $collection => $value){
+    foreach($pid_namespaces as $key => $namespace){
+      if(strpos($collection,$namespace)===0){
+        $collections[$collection]=$value;
+      }
+    }
+  }
+  return $collections;
+}
+
+/**
+ *
  * @param <array> $form
  * @param <array> $form_state
  *
@@ -222,26 +267,60 @@ function islandora_coalliance_manager_create_collection_form_submit(&$form, &$fo
   $submitter_role = $form_state['values']['submitter_role'];
   $manager_role = $form_state['values']['manager_role'];
   $adminstrator_role = $form_state['values']['adminstrator_role'];
-  $policy_stream = create_security_policy_stream($form, $form_state);
-  $mods_stream = create_mods_stream($form, $form_state);
+  $pid_namespace = $form_state['values']['pid_namespace'];
+  $pid_namespace = substr ($pid_namespace,0,strlen($pid_namespace)-1);
+  $policy_stream = islandora_coalliance_manager_create_security_policy_stream($form, $form_state);
+  $mods_stream = islandora_coalliance_manager_create_mods_stream($form, $form_state);
   //echo '<pre>'.$policy_stream.'</pre>';
   //exit();
-  $collection_policy_stream = create_collection_policy_stream($form, $form_state); //searchterms and relationship is assumed here
-  $new_pid = fedora_item::get_next_PID_in_namespace();
+  $collection_policy_stream = islandora_coalliance_manager_create_collection_policy_stream($form, $form_state); //searchterms and relationship is assumed here
+  $new_pid = fedora_item::get_next_PID_in_namespace($pid_namespace);
+  $query_stream = 'select $object $title from <#ri>
+                             where $object <fedora-model:label> $title
+                             and ($object <fedora-rels-ext:isMemberOf> <info:fedora/'.$new_pid.'>
+                               or $object <fedora-rels-ext:isMemberOfCollection> <info:fedora/'.$new_pid.'>)
+                             and $object <fedora-model:state> <info:fedora/fedora-system:def/model#Active>
+                             order by $title';
   $new_object = fedora_item::ingest_new_item($new_pid, 'A', $new_collections_label, $user->name);
   $new_object->add_datastream_from_string($collection_policy_stream, 'COLLECTION_POLICY', 'COLLECTION_POLICY', 'text/xml', 'M', null);
   $new_object->add_datastream_from_string($policy_stream,'POLICY','POLICY','text/xml','M','added security policy stream');
+  $new_object->add_datastream_from_string($policy_stream, 'CHILD_SECURITY', 'CHILD_SECURITY','text/xml','M','added child security stream');
   $new_object->add_datastream_from_string($mods_stream,'MODS','MODS','text/xml','M','added mods stream');
+  $new_object->add_datastream_from_string($query_stream,'QUERY','QUERY', 'text/plain','M','added query stream');
   $new_object->add_relationship('isMemberOfCollection', $collection_to_ingest_into, RELS_EXT_URI);
-  $new_object->add_relationship('hasModel', 'islandora:collectionCmodel', FEDORA_MODEL_URI);
+  islandora_coalliance_manager_add_thumbnail_stream($new_object);
+  $new_object->add_relationship('hasModel', 'islandora:collectionCModel', FEDORA_MODEL_URI);
   $return_url = '<a href="' . $base_url . '/fedora/repository/' . $new_pid . '/-/' . $new_collections_label . '"/>' . $new_collections_label . '</a>';
-  $form_state['redirect'] = '/fedora/repository/' . $new_pid . '/-/' . $new_collections_label;
+  $form_state['redirect'] = 'fedora/repository/' . $new_pid . '/-/'.$new_collections_label;
+  ///formbuilder/edit/{object:pid}/{dsid}/{form name}
   drupal_set_message(t('Created new Collection %s', array('%s' => $new_collections_label . ' with pid ' . $new_pid)));
-  return 'done';
+  return '';
 }
 
+/**
+ *
+ * @param <type> $new_object
+ * @return <type>
+ */
+function islandora_coalliance_manager_add_thumbnail_stream(&$object){
+    $filename = drupal_get_path('module', 'islandora_coalliance_manager') . '/images/TN.jpg';
+  if (file_exists($filename)) {
+    $object->add_datastream_from_file($filename,'TN','TN','image/jpg','M','added thumbnail stream');
+  }
+  else {
+    drupal_set_message(t('Failed to add TN stream, could not load TN.jpg'), 'error');
+    return FALSE;
+  }
+  return TRUE;
+}
 
-function create_mods_stream($form, $form_state){
+/**
+ *
+ * @param <type> $form
+ * @param <type> $form_state
+ * @return <type>
+ */
+function islandora_coalliance_manager_create_mods_stream($form, $form_state){
    $filename = drupal_get_path('module', 'islandora_coalliance_manager') . '/foxml/mods.xml';
   if (file_exists($filename)) {
     $contents = file_get_contents($filename);
@@ -261,7 +340,7 @@ function create_mods_stream($form, $form_state){
  * @param <type> $form_state
  * @return <type>
  */
-function create_security_policy_stream($form, $form_state) {
+function islandora_coalliance_manager_create_security_policy_stream($form, $form_state) {
   $filename = drupal_get_path('module', 'islandora_coalliance_manager') . '/policy/Colorado_Alliance_Template.xml';
   if (file_exists($filename)) {
     $contents = file_get_contents($filename);
@@ -287,7 +366,7 @@ function create_security_policy_stream($form, $form_state) {
  * @param <array> $cmodels
  *
  */
-function create_collection_policy_stream($form, $form_state) {
+function islandora_coalliance_manager_create_collection_policy_stream($form, $form_state) {
   $pid_namespace = $form_state['values']['pid_namespace'];
   $cmodels_for_collection_policy = $form_state['values']['allowed_cModels']; //array
   $cmodels_with_labels = $form['allowed_cModels']['#options'];
@@ -312,6 +391,19 @@ function create_collection_policy_stream($form, $form_state) {
     return;
   }
   return $xml->asXML();
+}
+
+function islandora_coalliance_manager_object_list_to_array($resultxml){
+  $resultelements = simplexml_load_string($resultxml);
+  if(!$resultelements){
+     drupal_set_message(t('Error getting list of collection objects !e', array('!e' => $e->getMessage())), 'error');
+    return;
+  }
+  $results = array();
+   foreach ($resultelements->resultList->objectFields as $obj) {
+     $results[(string)$obj->pid]=(string)$obj->title;
+   }
+   return $results;
 }
 
 /**
@@ -342,7 +434,7 @@ function islandora_coalliance_manager_itql_to_array($query_results) {
  * @return <type>
  */
 function islandora_coalliance_manager_manage_policy() {
-  return 'test2';
+  return 'Work in progress please check back later';
 }
 
 /**

@@ -1,52 +1,61 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <collection_policy xmlns="http://www.islandora.ca" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" name="" xsi:schemaLocation="http://www.islandora.ca http://syn.lib.umanitoba.ca/collection_policy.xsd"> 
     <content_models> 
-        <content_model dsid="ISLANDORACM" name="Collection" namespace="islandora:collection" pid="islandora:collectionCModel"></content_model> 
+        <!--<content_model dsid="ISLANDORACM" name="Collection" namespace="islandora:collection" pid="islandora:collectionCModel"></content_model>-->
     </content_models> 
-    <search_terms> 
-        <term default="true" field="mods.Title">Title</term>
-        <term field="mods.altTitle">Alternate Title</term>
-        <term field="mods.creator">Creator</term>
-        <term field="mods.creatorGivenName">Creator Given Name</term>
-        <term field="mods.creatorFamilyName">Creator Family Name</term>
-        <term field="mods.creatorTACreator Terms of Address">Creator Terms of Address</term>
-        <term field="mods.contributorContributor">Contributor</term>
-        <term field="mods.contributorFamilyName">Contributor Family Name</term>
-        <term field="mods.contributorGivenName">Contributor Given Name</term>
-        <term field="mods.contributorTA">Contributor TA</term>
-        <term field="mods.contributor">Contributor Corporate</term>
-        <term field="mods.creatorCorporate">Creator Corporate</term>
-        <term field="mods.typeOfResource">Type of Resource</term>
-        <term field="mods.dateCreated">Date Created</term>
-        <term field="mods.dateDigitized">Date Digitized</term>
-        <term field="mods.dateCopyright">Date Copyright</term>
-        <term field="mods.dateOther">Date Other</term>
-        <term field="mods.digitalOrigin">Digital Origiin</term>
-        <term field="mods.description">Description</term>
-        <term field="mods.topics">Topics</term>
-        <term field="mods.places">Places</term>
-        <term field="mods.dates">Dates</term>
-        <term field="mods.people">People</term>
-        <term field="mods.organizations">Organizations</term>
-        <term field="mods.handle">Handle</term>
-        <term field="mods.rightsStatement">Rights Statement</term>
-        <term field="mods.genre">Genre</term>
-        <term field="mods.PlaceOfPublication">Place of Publication</term>
-        <term field="mods.publisher">Publisher</term>
-        <term field="mods.language">Language</term>
-        <term field="mods.extent">Extent</term>
-        <term field="mods.form">Form</term>
-        <term field="mods.physicalNote">Physical Note</term>
-        <term field="mods.targetAudience">Target Audience</term>
-        <term field="mods.notes">Notes</term>
-        <term field="mods.notesAdmin">Notes Admin</term>
-        <term field="mods.notesFunding">mods.notesFunding</term>
-        <term field="mods.hostObject">Host Object</term>
-        <term field="mods.constituentObject">Constituent Object</term>
-        <term field="mods.series">Series</term>
-        <term field="mods.localIdentifier">Local Identifier</term>
-        <term field="mods.isbn">isbn</term>
-        <term field="mods.issn">issn</term>
+    <search_terms>
+        <!--define what fields we can query as part of the advanced search for this collection-->
+        <default>dc.description</default>
+		<number_of_results>1000</number_of_results>
+		 <term>
+		  <field>mods.Title</field>
+		  <value>Title</value>
+        </term>
+  <term><field>mods.TitleTitle</field><value>Title</value></term>
+  <term><field>mods.altTitle</field><value>Alternate Title</value></term>
+  <term><field>mods.creator</field><value>Creator</value></term>
+  <term><value>Creator Given Name</value><field>mods.creatorGivenName</field></term>
+  <term><value>Creator Family Name</value><field>mods.creatorFamilyName</field></term>
+  <term><value>Creator Terms of Address</value><field>mods.creatorTA</field></term>
+  <term><value>Contributor</value><field>mods.contributor</field></term>
+  <term><value>Contributor Family Name</value><field>mods.contributorFamilyName</field></term>
+  <term><value>Contributor Given Name</value><field>mods.contributorGivenName</field></term>
+  <term><value>Contributor Terms of Address</value><field>mods.contributorTA</field></term>
+  <term><value>Contributor Corporate</value><field>mods.contributorCorporate</field></term>
+  <term><value>Creator Corporate</value><field>mods.creatorCorporate</field></term>
+  <term><value>Type of Resource</value><field>mods.typeOfResource</field></term>
+  <term><value>Date Created</value><field>mods.dateCreated</field></term>
+  <term><value>Date Digitized</value><field>mods.dateDigitized</field></term>
+  <term><value>Date Copyright</value><field>mods.dateCopyright</field></term>
+  <term><value>Date Other</value><field>mods.dateOther</field></term>
+  <term><value>Digital Origiin</value><field>mods.digitalOrigin</field></term>
+  <term><value>Description</value><field>mods.description</field></term>
+     <!-- subjects-->
+  <term><value>Topics</value><field>mods.topics</field></term>
+  <term><value>Places</value><field>mods.places</field></term>
+  <term><value>Dates</value><field>mods.dates</field></term>
+  <term><value>People</value><field>mods.people</field></term>
+  <term><value>Organizations</value><field>mods.organizations</field></term>
+     <!--endsubject-->
+  <term><value>Handle</value><field>mods.handle</field></term>
+  <term><value>Rights Statement</value><field>mods.rightsStatement</field></term>
+  <term><value>Genre</value><field>mods.genre</field></term>
+  <term><value>Place of Publication</value><field>mods.PlaceOfPublication</field></term>
+  <term><value>Publisher</value><field>mods.publisher</field></term>
+  <term><value>Language</value><field>mods.language</field></term>
+  <term><value>Extent</value><field>mods.extent</field></term>
+  <term><value>Form</value><field>mods.form</field></term>
+  <term><value>Physical Note</value><field>mods.physicalNote</field></term>
+  <term><value>Target Audience</value><field>mods.targetAudience</field></term>
+  <term><value>Notes</value><field>mods.notes</field></term>
+  <term><value>Notes Admin</value><field>mods.notesAdmin</field></term>
+  <term><value>Notes Funding</value><field>mods.notesFunding</field></term>
+  <term><value>Host Object</value><field>mods.hostObject</field></term>
+  <term><value>Constituent Object</value><field>mods.constituentObject</field></term>
+  <term><value>Series</value><field>mods.series</field></term>
+  <term><value>Local Identifier</value><field>mods.localIdentifier</field></term>
+  <term><value>mods.isbn</value><field>mods.isbn</field></term>
+  <term><value>mods.issn</value><field>mods.issn</field></term>
     </search_terms>
     <staging_area></staging_area>
     <relationship>isMemberOfCollection</relationship> 

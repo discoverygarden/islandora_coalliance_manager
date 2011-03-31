@@ -33,6 +33,10 @@
 		</Actions>
 	</Target>
 
+
+
+         
+
     <!-- This rule controls datastream viewing. -->
      <Rule RuleId="denyapi-access-to-datastream-except-to-user-or-role" Effect="Deny">
          <Target>
