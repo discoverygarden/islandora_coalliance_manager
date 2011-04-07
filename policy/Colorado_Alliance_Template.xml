@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <Policy xmlns="urn:oasis:names:tc:xacml:1.0:policy" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" PolicyId="noObjectEditbyUserAndRole" RuleCombiningAlgId="urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:first-applicable">
     <!-- *********************************************************************************************************************************************************-->
     <!--  OBJECT-SPECIFIC POLICY:  This is an object-specific policy.  It could be stored inside the digital object in the POLICY -->
