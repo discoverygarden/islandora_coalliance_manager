@@ -39,7 +39,7 @@ function islandora_coalliance_manager_menu() {
     'access arguments' => array('ingest new fedora objects'),
   );
 
-  $items['admin/settings/islandora_admin_coalliance'] = array(
+ /* $items['admin/settings/islandora_admin_coalliance'] = array(
     'title' => 'Islandora Admin Co Client',
     'description' => 'For managing fedora collection creation and xacml Policies',
     'page callback' => 'drupal_get_form',
@@ -47,7 +47,7 @@ function islandora_coalliance_manager_menu() {
     'access arguments' => array('administer site configuration'),
     //'file' => 'islandora.admin.coalliance.inc',
     'type' => MENU_NORMAL_ITEM,
-  );
+  );*/
   return $items;
 }
 
