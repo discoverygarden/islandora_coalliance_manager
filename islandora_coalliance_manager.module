@@ -65,7 +65,7 @@ function islandora_coalliance_manager_create_collection() {
  *
  * @return array
  */
-function islandora_coalliance_manager_get_existing_collections() {
+/*function islandora_coalliance_manager_get_existing_collections() {
   module_load_include('inc', 'fedora_repository', 'api/fedora_item');
   module_load_include('inc', 'fedora_repository', 'CollectionClass');
   $itql_query = 'select $object  $title from <#ri> where
@@ -76,6 +76,13 @@ and $object <info:fedora/fedora-system:def/model#label> $title';
   $query_results = $collectionClass->getRelatedItems(NULL, $itql_query);
   $list_of_objects = islandora_coalliance_manager_itql_to_array($query_results);
   return $list_of_objects;
+}*/
+
+function islandora_coalliance_manager_get_related_objects_raw($itql_query){
+  module_load_include('inc', 'fedora_repository', 'CollectionClass');
+  $collectionClass = new CollectionClass();
+  $query_results = $collectionClass->getRelatedItems(NULL, $itql_query);
+  return $query_results;
 }
 
 /**
@@ -91,13 +98,13 @@ function islandora_coalliance_manager_get_related_objects($itql_query) {
   return $list_of_objects;
 }
 
-function islandora_coalliance_manager_find_objects_by_pattern($pattern,$field){
+/*function islandora_coalliance_manager_find_objects_by_pattern($pattern,$field){
   module_load_include('inc', 'fedora_repository', 'api/fedora_utils');
    $url = variable_get('fedora_base_url', 'http://localhost:8080/fedora');
    $url .= "/objects?query=$field~$pattern&pid=true&title=true&resultFormat=xml&maxResults=100";
    $results = do_curl($url);
    return $results;
-}
+}*/
 
 /**
  *
@@ -108,7 +115,14 @@ function islandora_coalliance_manager_create_collection_form() {
   //need a way to generalize the below query so other installs can use this if desired.  We know these are the collection
   //cmodels available in coalliance.  we then filter by pid namespace for each institution so we only get there collection
   //objects
-  $itql_query = 'select $object  $title from <#ri> where
+  $itql_query = 'select $object $title $content from <#ri>
+                             where ($object <info:fedora/fedora-system:def/model#label> $title
+                             and $object <fedora-model:hasModel> $content
+                             and ($content <fedora-model:hasModel> <info:fedora/islandora:collectionCModel>)
+                             and $object <fedora-model:state> <info:fedora/fedora-system:def/model#Active>)
+                             order by $title';
+
+/*  $itql_query = 'select $object  $title from <#ri> where
 $object <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active>
 and ($object <info:fedora/fedora-system:def/model#hasModel> <info:fedora/codearl:codearlBasicCollection>
 or $object <info:fedora/fedora-system:def/model#hasModel> <info:fedora/islandora:collectionCModel>
@@ -123,8 +137,9 @@ or $object <info:fedora/fedora-system:def/model#hasModel> <info:fedora/cowjcpl:c
 or $object <info:fedora/fedora-system:def/model#hasModel> <info:fedora/gopig:gopigBasicCollection>
 or $object <info:fedora/fedora-system:def/model#hasModel> <info:fedora/cogru:cogruBasicCollection>)
 and $object <info:fedora/fedora-system:def/model#label> $title
-order by $title';
+order by $title';*/
   $existing_collections = islandora_coalliance_manager_get_related_objects($itql_query);
+  $existing_collection_cmodels = islandora_coalliance_manager_get_related_objects_raw($itql_query);
   $itql_query = 'select $object  $title from <#ri> where
 $object <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active>
 and $object <info:fedora/fedora-system:def/model#hasModel> <info:fedora/fedora-system:ContentModel-3.0>
@@ -142,8 +157,10 @@ order by $title';
   foreach (explode(' ', trim(variable_get('fedora_pids_allowed', 'default: demo: changeme: Islandora: ilives: ')))as $namespace) {
     $pid_namespaces[$namespace] = $namespace;
   }
+  $existing_collection_cmodels = islandora_coalliance_manager_collection_cmodels_to_array($existing_collection_cmodels, $pid_namespaces);
   $existing_collections = islandora_coalliance_manager_limit_collections_by_namespace($existing_collections,$pid_namespaces);
   $existing_cmodels = islandora_coalliance_manager_limit_collections_by_namespace($existing_cmodels,$pid_namespaces);
+  //$existing_collection_cmodels = islandora_colliance_manager_get_cmodel_types($existing_collections, $pid_namespaces);
   $form['collection_for_ingest'] = array(
     '#type' => 'select',
     '#title' => t('Choose a Collection to create this collection in'),
@@ -166,6 +183,14 @@ order by $title';
     '#required' => TRUE,
     '#multiple' => TRUE,
     '#description' => t('A list of existing Content Models.  These represent the types of objects that users will be allowed to ingest in this new collection'),
+  );
+  $form['allowed_collection_cModels'] = array(
+    '#type' => 'select',
+    '#title' => t('Choose the type of Collection allowed'),
+    '#options' => $existing_collection_cmodels,
+    '#required' => TRUE,
+    '#multiple' => FALSE,
+    '#description' => t('A list of existing Collection types.  These represent the types of collection objects that you can choose from.'),
   );
   $form['collection_name'] = array(
     '#type' => 'textfield',
@@ -213,6 +238,19 @@ order by $title';
   $form['submit'] = array('#type' => 'submit', '#value' => t('Create'));
 
   return $form;
+}
+
+function islandora_colliance_manager_get_cmodel_types($existing_collections, $pid_namespaces){
+  $cmodels = array();
+  
+  foreach($existing_collections as $collection => $value){
+    foreach($pid_namespaces as $key => $namespace){
+      if(strpos($collection,$namespace)===0){
+        $cmodels[$collection]=$value;
+      }
+    }
+  }
+  return $cmodels;
 }
 
 /**
@@ -266,6 +304,7 @@ function islandora_coalliance_manager_create_collection_form_submit(&$form, &$fo
   $user_role = $form_state['values']['user_role'];
   $submitter_role = $form_state['values']['submitter_role'];
   $manager_role = $form_state['values']['manager_role'];
+  $collection_cmodel = $form_state['values']['allowed_collection_cModels'];
   $adminstrator_role = $form_state['values']['adminstrator_role'];
   $pid_namespace = $form_state['values']['pid_namespace'];
   $pid_namespace = substr ($pid_namespace,0,strlen($pid_namespace)-1);
@@ -289,7 +328,7 @@ function islandora_coalliance_manager_create_collection_form_submit(&$form, &$fo
   $new_object->add_datastream_from_string($query_stream,'QUERY','QUERY', 'text/plain','M','added query stream');
   $new_object->add_relationship('isMemberOfCollection', $collection_to_ingest_into, RELS_EXT_URI);
   islandora_coalliance_manager_add_thumbnail_stream($new_object);
-  $new_object->add_relationship('hasModel', 'islandora:collectionCModel', FEDORA_MODEL_URI);
+  $new_object->add_relationship('hasModel', $collection_cmodel, FEDORA_MODEL_URI);// need to make this the appropriate Cmodel
   $return_url = '<a href="' . $base_url . '/fedora/repository/' . $new_pid . '/-/' . $new_collections_label . '"/>' . $new_collections_label . '</a>';
   $form_state['redirect'] = 'fedora/repository/' . $new_pid . '/-/'.$new_collections_label;
   ///formbuilder/edit/{object:pid}/{dsid}/{form name}
@@ -426,6 +465,30 @@ function islandora_coalliance_manager_itql_to_array($query_results) {
     $title = $result->title;
     $list_of_objects[$object] = (string) $title; //.' '.$object;
   }
+  return $list_of_objects;
+}
+
+/**
+ *
+ * @param <type> $query_results
+ * @param <type> $pid_namespaces
+ * @return <type> 
+ */
+function islandora_coalliance_manager_collection_cmodels_to_array($query_results,$pid_namespaces) {
+  try {
+    $xml = new SimpleXMLElement($query_results);
+  } catch (Exception $e) {
+    drupal_set_message(t('Error getting list of collection objects !e', array('!e' => $e->getMessage())), 'error');
+    return;
+  }
+  $list_of_objects = array();
+  foreach ($xml->results->result as $result) {
+    $a = $result->content->attributes();
+    $temp = $a['uri'];
+    $object = substr($temp, strrpos($temp, '/') + 1);
+    $list_of_objects[$object] = (string) $object; //.' '.$object;
+  }
+  $list_of_objects =  islandora_coalliance_manager_limit_collections_by_namespace($list_of_objects,$pid_namespaces);
   return $list_of_objects;
 }
 

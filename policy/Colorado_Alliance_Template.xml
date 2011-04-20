@@ -31,62 +31,7 @@
 			<AnyAction/>
 		</Actions>
 	</Target>
-
-
-  <Rule RuleId="deny-inactive-except-to-user-or-role" Effect="Deny">
-      <Description>deny any access to objects or datastreams, which are either inactive(I) or deleted(D),
-    unless subject has administrator role or appropriate approver_role</Description>
-  <Target>
-    <Subjects>
-      <AnySubject/>
-    </Subjects>
-    <Resources>
-      <Resource>
-        <ResourceMatch MatchId="urn:oasis:names:tc:xacml:1.0:function:string-equal">
-          <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">I</AttributeValue>
-          <ResourceAttributeDesignator AttributeId="urn:fedora:names:fedora:2.1:resource:object:state"
-            DataType="http://www.w3.org/2001/XMLSchema#string" MustBePresent="false"/>
-        </ResourceMatch>
-      </Resource>
-      <Resource>
-        <ResourceMatch MatchId="urn:oasis:names:tc:xacml:1.0:function:string-equal">
-          <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">D</AttributeValue>
-          <ResourceAttributeDesignator AttributeId="urn:fedora:names:fedora:2.1:resource:object:state"
-            DataType="http://www.w3.org/2001/XMLSchema#string" MustBePresent="false"/>
-        </ResourceMatch>
-      </Resource>
-      <Resource>
-        <ResourceMatch MatchId="urn:oasis:names:tc:xacml:1.0:function:string-equal">
-          <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">I</AttributeValue>
-          <ResourceAttributeDesignator AttributeId="urn:fedora:names:fedora:2.1:resource:datastream:state"
-            DataType="http://www.w3.org/2001/XMLSchema#string" MustBePresent="false"/>
-        </ResourceMatch>
-      </Resource>
-      <Resource>
-        <ResourceMatch MatchId="urn:oasis:names:tc:xacml:1.0:function:string-equal">
-          <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">D</AttributeValue>
-          <ResourceAttributeDesignator AttributeId="urn:fedora:names:fedora:2.1:resource:datastream:state"
-            DataType="http://www.w3.org/2001/XMLSchema#string" MustBePresent="false"/>
-        </ResourceMatch>
-      </Resource>
-    </Resources>
-    <Actions>
-      <AnyAction/>
-    </Actions>
-  </Target>
-    <Condition FunctionId="urn:oasis:names:tc:xacml:1.0:function:not">
-      <Apply FunctionId="urn:oasis:names:tc:xacml:1.0:function:string-at-least-one-member-of">
-           <SubjectAttributeDesignator AttributeId="fedoraRole" DataType="http://www.w3.org/2001/XMLSchema#string"/>
-           <Apply FunctionId="urn:oasis:names:tc:xacml:1.0:function:string-bag">
-        <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">administrator</AttributeValue>
-        <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">approver_role</AttributeValue>
-        </Apply>
-        </Apply>
-    </Condition>
-  </Rule>
-
          
-
     <!-- This rule controls datastream viewing. -->
      <Rule RuleId="denyapi-access-to-datastream-except-to-user-or-role" Effect="Deny">
          <Target>
@@ -122,10 +67,6 @@
 				</Action>
 			</Actions>
 		</Target>
-
-
-
-
         <!-- ***************************************************************************************************************************************** -->
         <!-- Denial is conditional upon the user login Id NOT being one of the users identified in the set below.  -->
         <!-- ***************************************************************************************************************************************** -->
@@ -153,7 +94,6 @@
   $adminstrator_role = $form_state['values']['adminstrator_role'];
   $viewer_role-->
 
-                        <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">submitter_role</AttributeValue>
                          <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">manager_role</AttributeValue>
                           <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">user_role</AttributeValue>
                            <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">approver_role</AttributeValue>
@@ -163,6 +103,7 @@
                     <SubjectAttributeDesignator AttributeId="urn:fedora:names:fedora:2.1:subject:loginId" MustBePresent="false" DataType="http://www.w3.org/2001/XMLSchema#string"/>
                     <Apply FunctionId="urn:oasis:names:tc:xacml:1.0:function:string-bag">
                         <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">fedoraAdmin</AttributeValue><!-- super user in fedora context.  not a drupal user-->
+                        <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">owner_id</AttributeValue>
                     </Apply>
                 </Apply>
             </Apply>
@@ -308,7 +249,6 @@
                             for instance wym_editor then the users in wyomings drupal would be given the wym_editor-->
 
 
-                         <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">submitter_role</AttributeValue>
                          <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">manager_role</AttributeValue>
                            <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">approver_role</AttributeValue>
                     </Apply>
@@ -317,6 +257,7 @@
                     <SubjectAttributeDesignator AttributeId="urn:fedora:names:fedora:2.1:subject:loginId" MustBePresent="false" DataType="http://www.w3.org/2001/XMLSchema#string"/>
                     <Apply FunctionId="urn:oasis:names:tc:xacml:1.0:function:string-bag">
                         <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">fedoraAdmin</AttributeValue>
+                        <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">owner_id</AttributeValue>
                     </Apply>
                 </Apply>
             </Apply>
@@ -325,6 +266,61 @@
 
 
     </Rule>
+
+ <Rule RuleId="deny-inactive-except-to-user-or-role" Effect="Deny">
+      <Description>deny any access to objects or datastreams, which are either inactive(I) or deleted(D),
+    unless subject has administrator role or appropriate approver_role</Description>
+  <Target>
+    <Subjects>
+      <AnySubject/>
+    </Subjects>
+    <Resources>
+      <Resource>
+        <ResourceMatch MatchId="urn:oasis:names:tc:xacml:1.0:function:string-equal">
+          <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">I</AttributeValue>
+          <ResourceAttributeDesignator AttributeId="urn:fedora:names:fedora:2.1:resource:object:state"
+            DataType="http://www.w3.org/2001/XMLSchema#string" MustBePresent="false"/>
+        </ResourceMatch>
+      </Resource>
+      <Resource>
+        <ResourceMatch MatchId="urn:oasis:names:tc:xacml:1.0:function:string-equal">
+          <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">D</AttributeValue>
+          <ResourceAttributeDesignator AttributeId="urn:fedora:names:fedora:2.1:resource:object:state"
+            DataType="http://www.w3.org/2001/XMLSchema#string" MustBePresent="false"/>
+        </ResourceMatch>
+      </Resource>
+      <Resource>
+        <ResourceMatch MatchId="urn:oasis:names:tc:xacml:1.0:function:string-equal">
+          <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">I</AttributeValue>
+          <ResourceAttributeDesignator AttributeId="urn:fedora:names:fedora:2.1:resource:datastream:state"
+            DataType="http://www.w3.org/2001/XMLSchema#string" MustBePresent="false"/>
+        </ResourceMatch>
+      </Resource>
+      <Resource>
+        <ResourceMatch MatchId="urn:oasis:names:tc:xacml:1.0:function:string-equal">
+          <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">D</AttributeValue>
+          <ResourceAttributeDesignator AttributeId="urn:fedora:names:fedora:2.1:resource:datastream:state"
+            DataType="http://www.w3.org/2001/XMLSchema#string" MustBePresent="false"/>
+        </ResourceMatch>
+      </Resource>
+    </Resources>
+    <Actions>
+      <AnyAction/>
+    </Actions>
+  </Target>
+    <Condition FunctionId="urn:oasis:names:tc:xacml:1.0:function:not">
+      <Apply FunctionId="urn:oasis:names:tc:xacml:1.0:function:string-at-least-one-member-of">
+           <SubjectAttributeDesignator AttributeId="fedoraRole" DataType="http://www.w3.org/2001/XMLSchema#string"/>
+           <Apply FunctionId="urn:oasis:names:tc:xacml:1.0:function:string-bag">
+        <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">administrator</AttributeValue>
+        <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">approver_role</AttributeValue>
+        <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">manager_role</AttributeValue>
+        <!-- add usernames here ->>
+        </Apply>
+        </Apply>
+    </Condition>
+  </Rule>
+
 
 
     <!-- ***************************************************************************************************************************************************************** -->
