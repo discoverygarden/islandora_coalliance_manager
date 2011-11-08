@@ -14,6 +14,17 @@ function islandora_admin_coalliance_admin_settings_submit($form, $form_values) {
 
 /**
  * drupal hook
+ * creates a new permission than can be assigned to roles
+ */
+function islandora_coalliance_manager_perm() {
+  return array(
+      'create_fedora_collections',
+      'edit_fedora_xacml'
+  );
+}
+
+/**
+ * drupal hook
  * @return string
  */
 function islandora_coalliance_manager_menu() {
@@ -29,14 +40,14 @@ function islandora_coalliance_manager_menu() {
     //'type' => MENU_NORMAL_ITEM,
     'page arguments' => array(2),
     'page callback' => 'islandora_coalliance_manager_create_collection',
-    'access arguments' => array('ingest new fedora objects'),
+    'access arguments' => array('create_fedora_collections'),
   );
   $items['islandora_co_manager/manage_policy_stream'] = array(
     'title' => 'Manage XACML Policies',
     //'type' => MENU_LOCAL_TASK,
     'page arguments' => array(2),
     'page callback' => 'islandora_coalliance_manager_manage_policy',
-    'access arguments' => array('ingest new fedora objects'),
+    'access arguments' => array('edit_fedora_xacml'),
   );
 
  /* $items['admin/settings/islandora_admin_coalliance'] = array(
@@ -55,10 +66,10 @@ function islandora_coalliance_manager_menu() {
  *
  * @return <type>
  */
-function islandora_coalliance_manager_create_collection() {
+function islandora_coalliance_manager_create_collection($parent_collection="islandora:root") {
 
 
-  return drupal_get_form('islandora_coalliance_manager_create_collection_form');
+  return drupal_get_form('islandora_coalliance_manager_create_collection_form', $parent_collection);
 }
 
 /**
@@ -98,19 +109,13 @@ function islandora_coalliance_manager_get_related_objects($itql_query) {
   return $list_of_objects;
 }
 
-/*function islandora_coalliance_manager_find_objects_by_pattern($pattern,$field){
-  module_load_include('inc', 'fedora_repository', 'api/fedora_utils');
-   $url = variable_get('fedora_base_url', 'http://localhost:8080/fedora');
-   $url .= "/objects?query=$field~$pattern&pid=true&title=true&resultFormat=xml&maxResults=100";
-   $results = do_curl($url);
-   return $results;
-}*/
+
 
 /**
  *
  * @return <type>
  */
-function islandora_coalliance_manager_create_collection_form() {
+function islandora_coalliance_manager_create_collection_form(&$form_state, $parent_collection = NULL) {
   module_load_include('inc', 'fedora_repository', 'api/fedora_item');
   //need a way to generalize the below query so other installs can use this if desired.  We know these are the collection
   //cmodels available in coalliance.  we then filter by pid namespace for each institution so we only get there collection
@@ -148,11 +153,15 @@ order by $title';
   $existing_cmodels = islandora_coalliance_manager_get_related_objects($itql_query);
   
   $form = array();
+  
+/*
   $roles = user_roles(TRUE);
   $select_roles = array();
   foreach ($roles as $key => $value) {
     $select_roles[$value] = $value;
   }
+*/
+  
   $pid_namespaces = array(); // explode(' ',variable_get('fedora_pids_allowed', 'default: demo: changeme: Islandora: ilives: '));
   foreach (explode(' ', trim(variable_get('fedora_pids_allowed', 'default: demo: changeme: Islandora: ilives: ')))as $namespace) {
     $pid_namespaces[$namespace] = $namespace;
@@ -161,10 +170,16 @@ order by $title';
   $existing_collections = islandora_coalliance_manager_limit_collections_by_namespace($existing_collections,$pid_namespaces);
   $existing_cmodels = islandora_coalliance_manager_limit_collections_by_namespace($existing_cmodels,$pid_namespaces);
   //$existing_collection_cmodels = islandora_colliance_manager_get_cmodel_types($existing_collections, $pid_namespaces);
+  
+  // Going to try to set the default namespace in the form to be the same as the namespace of the parent collection.
+  // Get the parent namespace here by pulling off everything in front of the ":" and then re-adding the ":"
+  $parent_collection_namespace = strtok($parent_collection, ":") . ":";
+  
   $form['collection_for_ingest'] = array(
     '#type' => 'select',
     '#title' => t('Choose a Collection to create this collection in'),
     '#options' => $existing_collections,
+    '#default_value' => $parent_collection,
     '#required' => TRUE,
     '#description' => t('A list of existing collections.'),
   );
@@ -172,6 +187,7 @@ order by $title';
     '#type' => 'select',
     '#title' => t('Choose a namespace'),
     '#options' => $pid_namespaces,
+    '#default_value' => $parent_collection_namespace,
     '#required' => TRUE,
     '#multiple' => FALSE,
     '#description' => t('Choose the namespace these objects will have when ingested'),
@@ -199,6 +215,7 @@ order by $title';
     '#required' => TRUE,
     '#description' => t('A name or title for the new collection'),
   );
+/*
   $form['user_role'] = array(
     '#type' => 'select',
     '#title' => t('Choose the user role'),
@@ -234,7 +251,7 @@ order by $title';
     '#options' => $select_roles,
     '#description' => t('Choose the role that will be assigned to administrators.'),
   );
-
+*/
   $form['submit'] = array('#type' => 'submit', '#value' => t('Create'));
 
   return $form;

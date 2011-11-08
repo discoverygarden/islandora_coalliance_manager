@@ -315,7 +315,7 @@
         <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">administrator</AttributeValue>
         <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">approver_role</AttributeValue>
         <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#string">manager_role</AttributeValue>
-        <!-- add usernames here ->>
+        <!-- add usernames here -->
         </Apply>
         </Apply>
     </Condition>
@@ -323,7 +323,7 @@
 
 
 
-    <!-- ***************************************************************************************************************************************************************** -->
+  
 
     <!-- ***************************************************************************************************************************************************************** -->
     <!-- Rule 3:  Permit all other access to this object.  In conjunction with the other rules, the net effect should be that everything is permitted-->
