@@ -192,6 +192,9 @@ function islandora_coalliance_manager_create_collection_form_submit(&$form, &$fo
   global $user;
   global $base_url;
   module_load_include('inc', 'fedora_repository', 'api/fedora_item');
+  module_load_include('inc', 'islandora_content_model_forms', 'FOXML');
+  module_load_include('inc', 'fedora_repository', 'ObjectHelper');
+  $object_helper = new ObjectHelper();
   $collection_to_ingest_into = $form_state['values']['collection_for_ingest'];
   $new_collections_label = $form_state['values']['collection_name'];
   $collection_cmodel = $form_state['values']['allowed_collection_cModels'];
@@ -200,12 +203,15 @@ function islandora_coalliance_manager_create_collection_form_submit(&$form, &$fo
   $mods_stream = islandora_coalliance_manager_create_mods_stream($form, $form_state);
   $collection_policy_stream = islandora_coalliance_manager_create_collection_policy_stream($form, $form_state); //searchterms and relationship is assumed here
   $new_pid = fedora_item::get_next_PID_in_namespace($pid_namespace);
-  $new_object = fedora_item::ingest_new_item($new_pid, 'A', $new_collections_label, $user->name);
+  $foxml = new FOXML($new_collections_label, $new_pid, NULL, $collection_cmodel, $collection_to_ingest_into, 'isMemberOfCollection', NULL, NULL, NULL, 'A');
+  $new_object = fedora_item::ingest_from_FOXML($foxml);
   $new_object->add_datastream_from_string($collection_policy_stream, 'COLLECTION_POLICY', 'COLLECTION_POLICY', 'text/xml', 'M', null);
   $new_object->add_datastream_from_string($mods_stream,'MODS','MODS','text/xml','M','added mods stream');
-  $new_object->add_relationship('isMemberOfCollection', $collection_to_ingest_into, RELS_EXT_URI);
+  $policy_stream = $object_helper->getStream($collection_to_ingest_into, 'CHILD_SECURITY', FALSE);
+  if($policy_stream) {
+    $new_object->add_datastream_from_string($policy_stream,'CHILD_SECURITY','CHILD_SECURITY','text/xml','M','added child security stream');
+  }
   islandora_coalliance_manager_add_thumbnail_stream($new_object);
-  $new_object->add_relationship('hasModel', $collection_cmodel, FEDORA_MODEL_URI);// need to make this the appropriate Cmodel
   $return_url = '<a href="' . $base_url . '/fedora/repository/' . $new_pid . '/-/' . $new_collections_label . '"/>' . $new_collections_label . '</a>';
   $form_state['redirect'] = 'fedora/repository/' . $new_pid . '/-/'.$new_collections_label;
   ///formbuilder/edit/{object:pid}/{dsid}/{form name}
