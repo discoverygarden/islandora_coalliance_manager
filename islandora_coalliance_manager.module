@@ -194,6 +194,7 @@ function islandora_coalliance_manager_create_collection_form_submit(&$form, &$fo
   module_load_include('inc', 'fedora_repository', 'api/fedora_item');
   module_load_include('inc', 'islandora_content_model_forms', 'FOXML');
   module_load_include('inc', 'fedora_repository', 'ObjectHelper');
+  $form_state['values']['collection_name'] = htmlspecialchars($form_state['values']['collection_name']);
   $object_helper = new ObjectHelper();
   $collection_to_ingest_into = $form_state['values']['collection_for_ingest'];
   $new_collections_label = $form_state['values']['collection_name'];
