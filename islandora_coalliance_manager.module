@@ -90,7 +90,6 @@ order by $title';
   // Going to try to set the default namespace in the form to be the same as the namespace of the parent collection.
   // Get the parent namespace here by pulling off everything in front of the ":" and then re-adding the ":"
   $parent_collection_namespace = strtok($parent_collection, ":") . ":";
-  
   $form['collection_for_ingest'] = array(
     '#type' => 'hidden',
     '#value' => $parent_collection ? $parent_collection : variable_get('fedora_repository_pid', 'islandora:top'),
@@ -129,7 +128,7 @@ order by $title';
   );
 
   $form['submit'] = array('#type' => 'submit', '#value' => t('Create'));
-
+  
   return $form;
 }
 
@@ -217,6 +216,21 @@ function islandora_coalliance_manager_create_collection_form_submit(&$form, &$fo
   $form_state['redirect'] = 'fedora/repository/' . $new_pid . '/-/'.$new_collections_label;
   ///formbuilder/edit/{object:pid}/{dsid}/{form name}
   drupal_set_message(t('Created new Collection %s', array('%s' => $new_collections_label . ' with pid ' . $new_pid)));
+  
+  if (module_exists('islandora_workflow')) {
+    module_load_include('collection.inc', 'islandora_workflow');
+    module_load_include('permissions.inc', 'islandora_workflow');
+    module_load_include('inc', 'islandora_workflow');
+
+    $parent_pid = $form['collection_for_ingest']['#value'];
+      if (islandora_workflow_is_collection_workflow_tracked($parent_pid)) {
+        if (islandora_workflow_user_collection_permission_check($parent_pid)) {
+          islandora_workflow_init_workflow($new_pid);
+        }
+      }
+  }
+  
+
   return '';
 }
 
